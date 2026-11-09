@@ -17,9 +17,9 @@
 | item | meaning |
 |---|---|
 | logo + model | the Claude mark and the current model. While Claude works, the mark breathes. |
-| `EFFORT ▂▃▄▅▆ high` | the reasoning effort. Five rising bars stand for low → max; the lit ones are the current level. |
+| `EFFORT ▂▃▄▅▆ high` | the reasoning effort. Five rising bars stand for low → max; the lit ones are the current level. Each level has its own colour: teal `low`, green `medium`, amber `high`, red-orange `xhigh`, purple `max`. |
 | directory, `branch*` | the working folder and git branch. `*` means uncommitted changes; `↑n ↓n` means ahead of or behind upstream. |
-| `COST $4.12 ▃▅▃▇… /turn` | total session cost, followed by the cost of each of the last 8 turns. A new bar grows in when a turn ends. |
+| `COST $4.12 ▃▅▃▇… /turn` | total session cost, followed by the cost of each of the last 8 turns. Height compares a turn with the priciest recent one. Colour shows what it actually cost: green at $0.10 or less, through amber, to red at $1 or more. A new bar grows in when a turn ends. |
 | `TOKENS 18.4M` | every token processed this session: input, output, cache reads and cache writes, subagents included |
 | `LINES +348 ▬▬ −97` | lines Claude added and removed through its edit tools, with the ratio as a small bar |
 | `TIME 2h14m` | session duration |
@@ -33,7 +33,7 @@
 | `7d` weekly limit | % used and time until it resets |
 
 **Colours and motion**
-- The `▪` tip at the right of each battery goes green → amber → red as usage climbs.
+- The `▪` tip at the right of each battery goes green → amber → red as usage climbs. The cost bars use the same scale for per-turn cost.
 - Each battery has its own frame colour: orange for context, blue for 5h, purple for 7d.
 - While Claude is working, a spinner turns and a light sweeps along the frames. When idle, only a faint, slow shimmer remains.
 
@@ -81,10 +81,11 @@ The constants at the top of `statusline.py` are meant to be edited. Changes appl
 | `FRAME_TINT` | `0.75` | how strongly the frames take their colour (0–1) |
 | `IDLE_SHIMMER` | `True` | the faint shimmer while idle |
 | `SPARK_LEN` | `8` | turns shown in the cost sparkline |
+| `COST_CHEAP` / `COST_PRICEY` | `0.10` / `1.00` | per-turn cost (USD) at which a cost bar is fully green / fully red |
 | `BUSY_WINDOW` | `3.0` | how many seconds after the last transcript write still count as "working" |
-| `PALETTES` | — | the dark and light colour sets |
+| `PALETTES` | — | the dark and light colour sets, including the five `effort` colours |
 
-The theme follows Claude Code's `/theme`. For `auto`, it follows the macOS appearance.
+The theme follows Claude Code's `/theme`. For `auto`, it follows the macOS appearance. For a custom theme (`custom:<name>`), it uses the `base` declared in `~/.claude/themes/<name>.json`.
 
 ## How it works
 

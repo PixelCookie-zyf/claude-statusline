@@ -69,7 +69,7 @@ def build(root, theme):
     cache = os.path.join(home, ".claude", "statusline", "cache")
     os.makedirs(cache)
     with open(os.path.join(cache, SID + ".json"), "w") as f:
-        json.dump({"cost_hist": [0.21, 0.35, 0.18, 0.52, 0.44, 0.29, 0.61, 0.38], "last_cost": 4.12, "grow_at": 0}, f)
+        json.dump({"cost_hist": [0.08, 0.21, 0.12, 0.46, 0.27, 1.18, 0.34, 0.15], "last_cost": 4.12, "grow_at": 0}, f)
 
     now = time.time()
     data = {

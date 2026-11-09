@@ -29,6 +29,8 @@ PALETTES = {
         good=(118, 190, 140), warn=(224, 174, 92), bad=(228, 106, 98),
         seg=dict(sys=(150, 138, 214), tools=(96, 156, 222), mcp=(84, 186, 176),
                  skills=(214, 172, 92), mem=(208, 132, 178), chat=(217, 119, 87)),
+        # effort low -> max: cool to hot, with max in Claude Code's "ultra" purple
+        effort=[(84, 186, 176), (118, 190, 140), (224, 174, 92), (226, 116, 84), (178, 132, 250)],
     ),
     "light": dict(
         fg=(38, 38, 36), dim=(108, 106, 100), faint=(168, 166, 160),
@@ -36,6 +38,7 @@ PALETTES = {
         good=(42, 138, 78), warn=(184, 126, 26), bad=(196, 62, 54),
         seg=dict(sys=(116, 98, 196), tools=(50, 112, 196), mcp=(28, 138, 128),
                  skills=(176, 126, 28), mem=(176, 82, 140), chat=(196, 94, 62)),
+        effort=[(28, 138, 128), (42, 138, 78), (184, 126, 26), (200, 84, 50), (128, 64, 230)],
     ),
 }
 SEG_ORDER = ["sys", "tools", "mcp", "skills", "mem", "chat"]
@@ -48,6 +51,8 @@ CLAUDE_ICON = None
 GAP_AFTER_ICON = "  "     # spacing between the logo and the model name
 FRAME_COLORS = True       # coloured battery frames: ctx orange, 5h blue, 7d purple; False = neutral grey
 FRAME_TINT = 0.75         # 0..1, how strongly the frame takes on its colour
+COST_CHEAP = 0.10         # per-turn cost at or below this is green ...
+COST_PRICEY = 1.00        # ... rising through amber to red at this and above
 TRACK = "─"
 BARS = "▁▂▃▄▅▆▇█"
 
@@ -173,6 +178,12 @@ def detect_theme(cache):
                 pass
             sysd = cache["sys_dark"] = {"t": now, "dark": dark}
         return "dark" if sysd["dark"] else "light"
+    if name.startswith("custom:"):  # ~/.claude/themes/<slug>.json declares its base theme
+        try:
+            with open(os.path.join(HOME, ".claude", "themes", name[7:] + ".json")) as f:
+                name = str(json.load(f).get("base") or name)
+        except Exception:
+            pass
     return "light" if "light" in name else "dark"
 
 
@@ -459,7 +470,16 @@ def split_bar(P, add, rem, width=4):
     return T("▬" * g, P["good"]) + T("▬" * (width - g), P["bad"])
 
 
+def cost_color(P, v):
+    """Per-turn cost -> good / warn / bad on a log scale between COST_CHEAP and COST_PRICEY."""
+    if v <= COST_CHEAP:
+        return P["good"]
+    t = math.log(v / COST_CHEAP) / math.log(COST_PRICEY / COST_CHEAP)
+    return mix(P["good"], P["warn"], t * 2) if t < 0.5 else mix(P["warn"], P["bad"], t * 2 - 1)
+
+
 def sparkline(P, vals, grow_t):
+    """Height = cost relative to the priciest recent turn; colour = what the turn actually cost."""
     out = T("▁" * (SPARK_LEN - len(vals)), P["line"])  # placeholder baseline until history fills
     if not vals:
         return out
@@ -470,7 +490,7 @@ def sparkline(P, vals, grow_t):
         if i == n - 1 and grow_t < 1:  # newest bar grows in
             h *= 1 - (1 - grow_t) ** 3
         idx = max(0, min(7, int(round(h * 7))))
-        col = mix(P["faint"], P["accent"], 0.35 + 0.65 * (i + 1) / n)
+        col = mix(P["faint"], cost_color(P, v), 0.55 + 0.45 * (i + 1) / n)  # older turns fade a little
         out = out + T(BARS[idx], col)
     return out
 
@@ -506,7 +526,7 @@ def effort_meter(P, level):
     lv = EFFORT_LEVELS.get(level, 0)
     out = Seg()
     for i in range(5):
-        out = out + T("▂▃▄▅▆"[i], P["accent"] if i < lv else P["faint"])
+        out = out + T("▂▃▄▅▆"[i], P["effort"][lv - 1] if i < lv else P["faint"])
     return out
 
 
@@ -571,7 +591,8 @@ def main():
     m = T(model, P["fg"], bold=True)
     if effort:
         m = m + T("  EFFORT ", P["faint"]) + effort_meter(P, effort)
-    eff_label = T(effort, P["dim"]) if effort else None
+    lv = EFFORT_LEVELS.get(effort, 0)
+    eff_label = T(effort, P["effort"][lv - 1] if lv else P["dim"]) if effort else None
     if data.get("fast_mode"):
         eff_label = (eff_label + T(" fast", P["accent"])) if eff_label else T("fast", P["accent"])
 
